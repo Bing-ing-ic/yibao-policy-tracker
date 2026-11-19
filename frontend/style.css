@@ -486,7 +486,7 @@ select:focus,input:focus{border-color:var(--teal2);box-shadow:0 0 0 3px var(--ac
 .modal-close:hover{border-color:var(--teal2);color:var(--teal)}
 #settingsModal .form-row input,#settingsModal .form-row select{min-width:0}
 
-.footer{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;color:var(--ink2);font-size:12px}
+.footer{display:flex;justify-content:center;align-items:center;padding:20px 32px;color:var(--ink2);font-size:12px;text-align:center}
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:11px 20px;border-radius:13px;font-size:13.5px;z-index:50;box-shadow:var(--shadow-lg)}
 .hidden{display:none!important}
 [hidden]{display:none!important}
@@ -957,7 +957,7 @@ select:focus,input:focus{border-color:var(--teal2);box-shadow:0 0 0 3px var(--ac
   .ask-source{flex-wrap:wrap}
   .drawer{width:100vw;padding:20px 18px}
   .detail-fav{top:18px;right:60px}
-  .footer{flex-direction:column;gap:10px;align-items:flex-start}
+  .footer{flex-direction:column;gap:10px;align-items:center;text-align:center}
   /* 新模块 */
   .hero-banner{margin-left:12px;margin-right:12px;padding:28px 20px}
   .hero-badge{letter-spacing:1px;font-size:10.5px}
