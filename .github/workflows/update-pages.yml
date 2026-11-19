@@ -78,6 +78,8 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY || '' }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || '' }}
           LLM_MODEL: ${{ secrets.LLM_MODEL || '' }}
+          # 每轮 runner 最多发起 120 条大模型解读，其余走规则解读，控制总时长与免费额度
+          LLM_MAX_PER_RUN: "120"
         run: python run_pipeline.py
 
       - name: 回提交更新后的静态数据快照

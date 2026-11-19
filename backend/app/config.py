@@ -242,7 +242,9 @@ LLM_ENABLED = os.environ.get("LLM_ENABLED", "0") == "1"
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "glm-4-flash")
-LLM_TIMEOUT = 15
+LLM_TIMEOUT = 30
+# 每轮抓取路径最多调用大模型解读的条数（0=不限）；超出后本轮其余条目走规则解读，控制 runner 总时长与额度
+LLM_MAX_PER_RUN = int(os.environ.get("LLM_MAX_PER_RUN", "0"))
 
 # 站点身份（用于解读时标注适用语境）
 SITE_CONTEXT = {
