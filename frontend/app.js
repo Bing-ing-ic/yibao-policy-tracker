@@ -49,7 +49,8 @@ const QUICK_TAGS = [
 const LOW_RELEVANCE = ["遴选公务员", "面试", "大赛", "获奖名单", "公示名单", "网站升级", "平台升级维护", "小程序登录", "答疑", "筹备公告"];
 
 /* ---------------- 静态数据缓存 ---------------- */
-const DB = { stats: null, facets: null, expStats: null, policies: [], exposures: [] };
+const DB = { stats: null, facets: null, expStats: null, policies: [], exposures: [], details: {} };
+let _detailsPromise = null;
 
 async function loadJSON(path, fallback) {
   try {
@@ -69,11 +70,32 @@ async function loadJSON(path, fallback) {
 }
 
 async function initData() {
-  DB.stats = await loadJSON("data/stats.json", {});
-  DB.facets = await loadJSON("data/facets.json", { by_tag: [] });
-  DB.expStats = await loadJSON("data/exposure_stats.json", { org_type: {} });
-  DB.policies = await loadJSON("data/policies.json", []);
-  DB.exposures = await loadJSON("data/exposures.json", []);
+  // 五个静态文件并行下载，互不阻塞；单个失败由 loadJSON 兜底为空值
+  const [stats, facets, expStats, policies, exposures] = await Promise.all([
+    loadJSON("data/stats.json", {}),
+    loadJSON("data/facets.json", { by_tag: [] }),
+    loadJSON("data/exposure_stats.json", { org_type: {} }),
+    loadJSON("data/policies.json", []),
+    loadJSON("data/exposures.json", []),
+  ]);
+  DB.stats = stats;
+  DB.facets = facets;
+  DB.expStats = expStats;
+  DB.policies = policies;
+  DB.exposures = exposures;
+}
+
+/* 政策详情包（正文/落地动作/标准/关键数据）按需懒加载，仅在打开抽屉时取一次并缓存 */
+function loadDetails() {
+  if (_detailsPromise) return _detailsPromise;
+  _detailsPromise = loadJSON("data/policy_details.json", {}).then(function (d) {
+    DB.details = d && typeof d === "object" ? d : {};
+    return DB.details;
+  });
+  return _detailsPromise;
+}
+function getDetail(id) {
+  return DB.details[String(id)] || {};
 }
 
 function toast(msg) {
@@ -144,7 +166,7 @@ function askQuestion() {
   for (const r of DB.policies) {
     const title = r.title || "";
     if (LOW_RELEVANCE.some((k) => title.includes(k))) continue;
-    if (!r.content) continue;
+    if (!r.title) continue;
     const tags = (r.topic_tags || []).join(" ");
     const summary = r.ai_summary || "";
     const blob = `${title} ${tags} ${summary}`;
@@ -629,7 +651,6 @@ function filterPolicies() {
     arr = arr.filter((p) =>
       (p.title || "").toLowerCase().includes(k) ||
       (p.summary || "").toLowerCase().includes(k) ||
-      (p.content || "").toLowerCase().includes(k) ||
       (p.doc_no || "").toLowerCase().includes(k) ||
       (p.ai_summary || "").toLowerCase().includes(k)
     );
@@ -733,9 +754,11 @@ function loadList() {
 }
 
 /* ---------------- 详情 ---------------- */
-function openDetail(id) {
-  const p = DB.policies.find((x) => x.id === +id);
-  if (!p) { toast("未找到该政策详情"); return; }
+async function openDetail(id) {
+  const raw = DB.policies.find((x) => x.id === +id);
+  if (!raw) { toast("未找到该政策详情"); return; }
+  await loadDetails();
+  const p = Object.assign({}, raw, getDetail(id));
   const tags = (p.topic_tags || []).map((t) => `<span class="badge">${esc(t)}</span>`).join("");
   const apps = (p.applicable_to || []).map((t) => `<span class="badge">${esc(t)}</span>`).join("");
   const rel = Number(p.relevance || 0);

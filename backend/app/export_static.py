@@ -5,7 +5,8 @@
     python -m app.export_static
 
 产物写入 frontend/data/：
-    policies.json        政策 + 解读全字段（列表与详情共用）
+    policies.json        政策列表轻字段 + 解读摘要（首屏加载）
+    policy_details.json  正文/落地动作/标准/关键数据（按 id 索引，抽屉按需加载）
     exposures.json       曝光台记录
     stats.json          层级统计与最新条目
     facets.json         栏目 / 主题标签分布
@@ -24,6 +25,16 @@ def _j(v):
         return []
 
 
+# 详情包字段：仅在打开政策抽屉（原文 / 落地动作 / 待遇标准 / 关键数据）时按需加载，
+# 不进入首屏列表包，以减小首屏下载体积。
+_DETAIL_FIELDS = ("content", "actions", "standards", "key_data")
+# 前端未使用的冗余字段，导出时直接剔除，避免随包下发。
+_DROP_FIELDS = ("content_hash", "status", "updated_at", "keywords")
+# 需 JSON 解析的数组字段
+_ARRAY_FIELDS = ("topic_tags", "applicable_to", "keywords", "key_points", "core_elements",
+                 "actions", "risks", "standards", "impact_matrix", "key_data")
+
+
 def _export_policies(conn):
     rows = conn.execute(
         """
@@ -38,13 +49,20 @@ def _export_policies(conn):
         """
     ).fetchall()
     policies = []
+    details = {}
     for r in rows:
         d = dict(r)
-        for f in ("topic_tags", "applicable_to", "keywords", "key_points", "core_elements",
-                  "actions", "risks", "standards", "impact_matrix", "key_data"):
+        for f in _ARRAY_FIELDS:
             d[f] = _j(d.get(f))
+        # 抽出详情字段（数组已解析），单独入详情包
+        detail = {f: d.get(f) for f in _DETAIL_FIELDS}
+        details[str(d["id"])] = detail
+        for f in _DETAIL_FIELDS:
+            d.pop(f, None)
+        for f in _DROP_FIELDS:
+            d.pop(f, None)
         policies.append(d)
-    return policies
+    return policies, details
 
 
 def _export_exposures(conn):
@@ -122,7 +140,7 @@ def _export_exposure_stats(conn):
 def export():
     conn = database.get_conn()
     try:
-        policies = _export_policies(conn)
+        policies, details = _export_policies(conn)
         exposures = _export_exposures(conn)
         stats = _export_stats(conn, policies)
         facets = _export_facets(conn)
@@ -134,15 +152,17 @@ def export():
     os.makedirs(out_dir, exist_ok=True)
 
     def dump(name, obj):
+        # 紧凑序列化：去掉缩进空白，减小静态包体积（中文不转义）
         with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
-            json.dump(obj, f, ensure_ascii=False, indent=1)
+            json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 
     dump("policies.json", policies)
+    dump("policy_details.json", details)
     dump("exposures.json", exposures)
     dump("stats.json", stats)
     dump("facets.json", facets)
     dump("exposure_stats.json", exposure_stats)
-    print(f"exported: policies={len(policies)} exposures={len(exposures)} -> {out_dir}")
+    print(f"exported: policies={len(policies)} details={len(details)} exposures={len(exposures)} -> {out_dir}")
 
 
 if __name__ == "__main__":
