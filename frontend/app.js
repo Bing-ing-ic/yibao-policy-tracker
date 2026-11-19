@@ -1,3 +1,6 @@
+/* 前台暂停开放闸门：到关闭时点后不再加载政策数据、不绑定后台事件（抓取流水线不受影响） */
+const SITE_CLOSED = window.__SITE_CLOSED__ === true || document.documentElement.dataset.siteClosed === "1";
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
@@ -1439,7 +1442,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-(async function init() {
+if (!SITE_CLOSED) (async function init() {
   renderAskQuick();
   renderAskEmpty();
   if (typeof fetch === "undefined") {
@@ -1760,5 +1763,7 @@ function bindAdminEvents() {
   $$(".modal").forEach((m) => makeModalDraggable(m));
 }
 
-bindAdminEvents();
-refreshAdminUI();
+if (!SITE_CLOSED) {
+  bindAdminEvents();
+  refreshAdminUI();
+}
