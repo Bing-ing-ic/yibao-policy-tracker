@@ -56,6 +56,8 @@ jobs:
 
       - name: 配置 GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: enable
 
       - name: 上传站点产物（frontend）
         uses: actions/upload-pages-artifact@v3
