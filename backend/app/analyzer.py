@@ -433,9 +433,9 @@ def _sanitize_llm(parsed, content):
 
 def _llm_creds():
     return (
-        database.get_setting("llm_base_url", ""),
+        database.get_setting("llm_base_url", "") or config.LLM_BASE_URL,
         database.get_setting("llm_api_key", ""),
-        database.get_setting("llm_model", config.LLM_MODEL),
+        database.get_setting("llm_model", "") or config.LLM_MODEL,
     )
 
 
@@ -482,9 +482,9 @@ def llm_chat_json(system, user, temperature=0.2):
 
 
 def _llm_analyze(title, doc_no, publish_date, content):
-    base = database.get_setting("llm_base_url", "")
+    base = database.get_setting("llm_base_url", "") or config.LLM_BASE_URL
     key = database.get_setting("llm_api_key", "")
-    model = database.get_setting("llm_model", config.LLM_MODEL)
+    model = database.get_setting("llm_model", "") or config.LLM_MODEL
     if not base or not key:
         return None
     org = database.get_setting("site_org", config.SITE_CONTEXT.get("org", "乡镇卫生院"))
