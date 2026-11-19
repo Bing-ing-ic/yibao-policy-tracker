@@ -1498,13 +1498,69 @@ async function apiFetch(path, opts) {
 
 function openModal(id) {
   const map = { loginModal: "loginMask", settingsModal: "settingsMask", logsModal: "logsMask" };
-  $(`#${id}`).classList.remove("hidden");
+  const m = $(`#${id}`);
+  m.style.left = ""; m.style.top = ""; m.style.transform = ""; m.style.animation = "";
+  m.classList.remove("hidden");
   const mask = $(`#${map[id]}`); if (mask) mask.classList.remove("hidden");
 }
 function closeModal(id) {
   const map = { loginModal: "loginMask", settingsModal: "settingsMask", logsModal: "logsMask" };
   $(`#${id}`).classList.add("hidden");
   const mask = $(`#${map[id]}`); if (mask) mask.classList.add("hidden");
+}
+
+/* 弹窗标题栏拖拽：按住标题栏可移动弹窗，位置约束在视口内 */
+function makeModalDraggable(modal) {
+  const head = modal.querySelector(".modal-head");
+  if (!head) return;
+  let dragging = false;
+  let startX = 0, startY = 0, baseLeft = 0, baseTop = 0;
+
+  const insideInteractive = (el) => {
+    while (el && el !== head) {
+      const tag = el.tagName;
+      if (tag === "BUTTON" || tag === "INPUT" || tag === "SELECT" || tag === "A" || tag === "TEXTAREA") return true;
+      el = el.parentNode;
+    }
+    return false;
+  };
+
+  head.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    if (insideInteractive(e.target)) return;
+    dragging = true;
+    const rect = modal.getBoundingClientRect();
+    startX = e.clientX; startY = e.clientY;
+    baseLeft = rect.left; baseTop = rect.top;
+    modal.style.animation = "none";
+    modal.style.transform = "none";
+    modal.style.left = rect.left + "px";
+    modal.style.top = rect.top + "px";
+    head.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+
+  const onMove = (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const w = modal.offsetWidth, h = modal.offsetHeight;
+    let nl = baseLeft + dx;
+    let nt = baseTop + dy;
+    nl = Math.max(0, Math.min(nl, window.innerWidth - w));
+    nt = Math.max(0, Math.min(nt, window.innerHeight - 40));
+    modal.style.left = nl + "px";
+    modal.style.top = nt + "px";
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    head.style.cursor = "";
+    document.body.style.userSelect = "";
+  };
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
 }
 
 function refreshAdminUI() {
@@ -1701,6 +1757,7 @@ function bindAdminEvents() {
   ["loginMask", "settingsMask", "logsMask"].forEach((id) => {
     $(`#${id}`).addEventListener("click", () => closeModal(id.replace("Mask", "Modal")));
   });
+  $$(".modal").forEach((m) => makeModalDraggable(m));
 }
 
 bindAdminEvents();

@@ -465,9 +465,10 @@ select:focus,input:focus{border-color:var(--teal2);box-shadow:0 0 0 3px var(--ac
 .mx-note.muted{color:var(--muted-2)}
 
 /* 弹窗 */
-.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,92vw);background:var(--surface);border-radius:20px;z-index:32;box-shadow:var(--shadow-lg);animation:cmdIn .26s cubic-bezier(.2,.8,.3,1) both}
-.modal-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(20,184,176,.08),rgba(37,99,235,.08))}
-.modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,92vw);background:var(--surface);border-radius:20px;z-index:32;box-shadow:var(--shadow-lg);animation:modalIn .26s cubic-bezier(.2,.8,.3,1) both}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(20,184,176,.08),rgba(37,99,235,.08));cursor:grab;user-select:none;-webkit-user-select:none}
+.modal-head:active{cursor:grabbing}
+.modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto}
 .modal-body h3{font-size:15px;color:var(--teal)}
 .hint{font-size:12px;color:var(--ink3)}
 .form-row{display:flex;align-items:center;gap:10px;font-size:13.5px}
@@ -915,6 +916,7 @@ select:focus,input:focus{border-color:var(--teal2);box-shadow:0 0 0 3px var(--ac
 @keyframes slideInRight{from{opacity:.6;transform:translateX(40px)}to{opacity:1;transform:none}}
 @keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes cmdIn{from{opacity:0;transform:translateY(-14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes modalIn{from{opacity:0;transform:translate(-50%,-46%) scale(.97)}to{opacity:1;transform:translate(-50%,-50%)}}
 @keyframes cloudIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
 @keyframes countIn{from{opacity:0;transform:translateY(8px) scale(.94);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
 .alert-dot{width:12px;height:12px;border-radius:50%;background:var(--rose);box-shadow:0 0 0 5px var(--rose-border);animation:pulse 1.8s infinite;flex:0 0 auto}
