@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231fb6a6%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%232f7de1%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2229%22%20fill%3D%22url%28%23g%29%22/%3E%3Cpath%20d%3D%22M32%2018v16M24%2026h16%22%20stroke%3D%22%23fff%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M18%2045c7-6%2017-8%2028-4%22%20stroke%3D%22%23e8fff9%22%20stroke-width%3D%223%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20opacity%3D%22.85%22/%3E%3C/svg%3E" />
+  <title>医保政策捕获与AI解读平台 · 国家/云南/玉溪</title>
+  <link rel="stylesheet" href="style.css?v=69" />
+</head>
+<body>
+  <div id="scrollProgress" class="scroll-progress"></div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo">
+          <svg id="brandSvg" viewBox="0 0 64 64" width="72" height="72" role="img" aria-label="医保政策捕获与 AI 解读平台">
+            <defs>
+              <linearGradient id="brandDyn" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#1fb6a6" /><stop offset="1" stop-color="#2f7de1" />
+              </linearGradient>
+            </defs>
+            <g fill="none" stroke="#1fb6a6" stroke-linecap="round" opacity=".8">
+              <animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="20s" repeatCount="indefinite" />
+              <circle cx="32" cy="32" r="25" stroke-width="1.6" stroke-dasharray="18 8 5 11" />
+              <circle cx="32" cy="7" r="1.7" fill="#1fb6a6" stroke="none" />
+            </g>
+            <g fill="none" stroke="#2f7de1" stroke-linecap="round" opacity=".7">
+              <animateTransform attributeName="transform" type="rotate" from="360 32 32" to="0 32 32" dur="14s" repeatCount="indefinite" />
+              <circle cx="32" cy="32" r="19" stroke-width="1.4" stroke-dasharray="11 7 14 9" />
+              <circle cx="32" cy="13" r="1.4" fill="#2f7de1" stroke="none" />
+            </g>
+            <circle cx="32" cy="32" r="11" fill="url(#brandDyn)" />
+            <circle cx="32" cy="32" r="11" fill="none" stroke="#2f7de1" stroke-width="1.4">
+              <animate attributeName="r" values="11;14;11" dur="2.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.55;0;0.55" dur="2.8s" repeatCount="indefinite" />
+            </circle>
+            <path d="M32 26v12M26 32h12" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".96" />
+            <circle cx="32" cy="32" r="1.7" fill="#fff" />
+          </svg>
+        </div>
+        <div>
+          <h1>医保政策捕获与 AI 解读平台</h1>
+          <p>国家医保局（主线指导） · 云南省医保局（政策引导） · 玉溪市医保局（政策执行）｜服务于玉溪澄江市乡镇卫生院</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="run-status">
+          <span id="lastRun" class="next-run"></span>
+        </div>
+        <div class="admin-actions" id="adminActions" hidden>
+          <button id="btnLogin" class="btn ghost">🔑 登录</button>
+          <button id="btnCrawl" class="btn primary">🔄 立即抓取</button>
+          <button id="btnReanalyze" class="btn ghost">🧠 批量重解读</button>
+          <button id="btnLogs" class="btn ghost">📜 抓取日志</button>
+          <button id="btnSettings" class="btn ghost">⚙️ 设置</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 模块导航 Tab：态势总览 / 政策解读 / 政策问答 / 医保曝光台 -->
+  <nav class="module-tabs" id="moduleTabs">
+    <button class="mtab active" data-view="dashboard">
+      <span class="mtab-icon">◈</span>
+      <span class="mtab-text">态势总览</span>
+    </button>
+    <button class="mtab" data-view="policy">
+      <span class="mtab-icon">📋</span>
+      <span class="mtab-text">政策文件与 AI 解读</span>
+      <span class="mtab-count" id="policyCount">0</span>
+    </button>
+    <button class="mtab" data-view="ask">
+      <span class="mtab-icon">💬</span>
+      <span class="mtab-text">政策问答助手</span>
+      <span class="mtab-count" id="askCount">规则</span>
+    </button>
+    <button class="mtab mtab-warn" data-view="exposure">
+      <span class="mtab-icon alert-dot"></span>
+      <span class="mtab-text">医保曝光台</span>
+      <span class="mtab-count warn" id="exposureCount">0</span>
+    </button>
+  </nav>
+
+  <!-- 抓取实时进度条（仅本地后台环境显示） -->
+  <div class="crawl-progress" id="crawlProgress" hidden>
+    <div class="cp-bar"><i id="cpFill"></i></div>
+    <div class="cp-info">
+      <span class="cp-stage" id="cpStage">准备开始…</span>
+      <span class="cp-right">
+        <span class="cp-count" id="cpCount"></span>
+        <span class="cp-pct" id="cpPct">0%</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- ============ 态势总览视图 ============ -->
+  <section class="view" id="dashboardView">
+    <div class="hero-banner">
+      <div class="hero-grid"></div>
+      <div class="hero-orb"></div>
+      <div class="hero-inner">
+        <span class="hero-badge">POLICY RADAR · 政策态势感知</span>
+        <h2 class="hero-title">医保政策<span class="grad-text">智能监测中心</span></h2>
+        <p class="hero-sub">国家主线 · 云南引导 · 玉溪执行，一屏洞察医保政策态势与基层影响</p>
+        <div class="hero-metrics">
+          <div class="hero-metric"><div class="hm-value count-up" data-target="0">0</div><div class="hm-label">政策总量</div></div>
+          <div class="hero-metric"><div class="hm-value count-up" data-target="3">3</div><div class="hm-label">覆盖层级</div></div>
+          <div class="hero-metric"><div class="hm-value count-up" data-target="0">0</div><div class="hm-label">AI 解读率 %</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-body"><div class="kpi-value count-up" data-target="0">0</div><div class="kpi-label">政策总数</div></div>
+        <div class="kpi-spark" data-spark="level"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">📈</div>
+        <div class="kpi-body"><div class="kpi-value count-up" data-target="0">0</div><div class="kpi-label">近 12 月发布</div></div>
+        <div class="kpi-spark" data-spark="trend"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🚨</div>
+        <div class="kpi-body"><div class="kpi-value count-up" data-target="0">0</div><div class="kpi-label">曝光记录</div></div>
+        <div class="kpi-spark" data-spark="exposure"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-body"><div class="kpi-value count-up" data-target="0">0</div><div class="kpi-label">平均相关度</div></div>
+        <div class="kpi-spark" data-spark="relevance"></div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-panel span-12 panel-feature">
+        <div class="panel-cap"><h3>近 12 月发布趋势</h3><span class="cap-sub">按月统计 · 峰值一目了然</span></div>
+        <div class="panel-body" id="chartTrend"></div>
+      </div>
+      <div class="dash-panel span-4">
+        <div class="panel-cap"><h3>三级层级分布</h3><span class="cap-sub">国家 / 云南 / 玉溪</span></div>
+        <div class="panel-body" id="chartLevel"></div>
+      </div>
+      <div class="dash-panel span-4">
+        <div class="panel-cap"><h3>AI 解读覆盖率</h3><span class="cap-sub">大模型解读占比</span></div>
+        <div class="panel-body" id="chartAi"></div>
+      </div>
+      <div class="dash-panel span-4">
+        <div class="panel-cap"><h3>相关度分布</h3><span class="cap-sub">基层相关性</span></div>
+        <div class="panel-body" id="chartRelevance"></div>
+      </div>
+      <div class="dash-panel span-6">
+        <div class="panel-cap"><h3>主题热度 TOP10</h3><span class="cap-sub">按标签计数</span></div>
+        <div class="panel-body" id="chartTopics"></div>
+      </div>
+      <div class="dash-panel span-6">
+        <div class="panel-cap"><h3>曝光机构类型占比</h3><span class="cap-sub">官方通报</span></div>
+        <div class="panel-body" id="chartExposure"></div>
+      </div>
+    </div>
+
+    <div class="dash-bottom">
+      <div class="dash-panel timeline-panel">
+        <div class="panel-cap"><h3>政策时间轴</h3><span class="cap-sub">最近发布 · 点击查看解读</span></div>
+        <div id="policyTimeline" class="timeline"></div>
+      </div>
+      <div class="dash-panel cloud-panel">
+        <div class="panel-cap"><h3>主题星云</h3><span class="cap-sub">点击探索对应政策</span></div>
+        <div id="tagCloud" class="cloud"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 政策视图 ============ -->
+  <section class="view hidden" id="policyView">
+    <section class="stats" id="stats"></section>
+
+    <div class="section-head">
+      <h2>政策检索与解读</h2>
+      <span class="section-sub">国家主线 · 云南引导 · 玉溪执行，面向澄江市乡镇卫生院相关度排序｜政策时间范围：2024 年至今</span>
+    </div>
+
+    <section class="filters">
+      <div class="filter-group">
+        <label>层级（点击统计卡亦可联动）</label>
+        <div class="chips" id="levelChips">
+          <button class="chip active" data-level=""><span class="chip-name">全部</span><span class="chip-count" data-count="all"></span></button>
+          <button class="chip" data-level="national"><span class="chip-name">🏛 国家</span><span class="chip-count" data-count="national"></span></button>
+          <button class="chip" data-level="provincial"><span class="chip-name">🌿 云南省</span><span class="chip-count" data-count="provincial"></span></button>
+          <button class="chip" data-level="municipal"><span class="chip-name">🏥 玉溪市</span><span class="chip-count" data-count="municipal"></span></button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>栏目</label>
+        <div class="chips" id="columnChips"></div>
+      </div>
+      <div class="filter-group">
+        <label>时效性（是否现行有效）</label>
+        <div class="chips" id="validityChips"></div>
+      </div>
+      <div class="filter-group">
+        <label>常用主题（点击筛选，再点取消）</label>
+        <div class="chips" id="quickTags"></div>
+      </div>
+      <div class="filter-group">
+        <label>排序</label>
+        <div class="chips" id="sortChips">
+          <button class="chip active" data-sort="date">按发布日期</button>
+          <button class="chip" data-sort="relevance">按基层相关度</button>
+          <button class="chip" data-sort="effective">按生效日期</button>
+        </div>
+      </div>
+      <div class="filter-group grow">
+        <label>关键词</label>
+        <input id="keyword" type="text" placeholder="搜索标题 / 正文 / 文号…" />
+      </div>
+      <div class="filter-group">
+        <label>收藏夹</label>
+        <div class="chips">
+          <button class="chip fav-filter" id="favFilter" title="只看我收藏的政策">★ 我的收藏</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>&nbsp;</label>
+        <button id="resetFilters" class="btn ghost reset-btn">重置筛选</button>
+      </div>
+      <div class="filter-group active-tag-wrap" id="activeTagWrap" hidden>
+        <label>当前主题标签</label>
+        <button class="chip tag-remove" id="activeTag">—</button>
+      </div>
+    </section>
+
+    <div class="new-banner" id="newBanner" hidden role="button" tabindex="0"></div>
+    <div class="result-bar" id="resultBar"></div>
+    <main class="list" id="policyList"></main>
+    <div class="pager">
+      <button id="prevPage" class="btn ghost">上一页</button>
+      <span id="pageInfo"></span>
+      <button id="nextPage" class="btn ghost">下一页</button>
+    </div>
+  </section>
+
+  <!-- ============ 政策问答视图 ============ -->
+  <section class="view hidden" id="askView">
+    <div class="ask-hero">
+      <div class="ask-hero-title">
+        <span class="ask-hero-icon">💬</span>
+        <div>
+          <h2>政策问答助手</h2>
+          <span class="exposure-sub">用自然语言提问，基于已抓取的官方政策检索相关条目，并列出可溯源的政策依据</span>
+        </div>
+      </div>
+      <span class="ai-type" id="askEngineTag">规则检索</span>
+    </div>
+
+    <div class="ask-box">
+      <div class="ask-input-row">
+        <input id="askInput" type="text" placeholder="例如：异地就医怎么备案？居民医保缴费标准是多少？集采药品怎么执行？" />
+        <button id="askBtn" class="btn primary">提问</button>
+      </div>
+      <div class="chips" id="askQuick"></div>
+    </div>
+
+    <div id="askResult" class="ask-result"></div>
+  </section>
+
+  <!-- ============ 曝光台视图 ============ -->
+  <section class="view hidden" id="exposureView">
+    <div class="exp-hero">
+      <div class="exp-hero-title">
+        <span class="alert-dot"></span>
+        <div>
+          <h2>医保曝光台</h2>
+          <span class="exposure-sub">违规使用医保基金机构 · 退出医保协议机构通报（官方来源）</span>
+        </div>
+      </div>
+      <div class="exposure-total" id="exposureStats"></div>
+    </div>
+
+    <div class="exposure-filters">
+      <div class="filter-group">
+        <label>类型</label>
+        <div class="chips" id="expKindChips"></div>
+      </div>
+      <div class="filter-group">
+        <label>层级</label>
+        <div class="chips" id="expLevelChips"></div>
+      </div>
+      <div class="filter-group">
+        <label>机构类型</label>
+        <div class="chips" id="expTypeChips"></div>
+      </div>
+      <div class="filter-group grow">
+        <label>关键词</label>
+        <input id="expKeyword" type="text" placeholder="搜索机构名 / 问题 / 处理…" />
+      </div>
+    </div>
+
+    <div class="exposure-list" id="exposureList"></div>
+    <div class="exp-pager" id="expPager"></div>
+  </section>
+
+  <!-- 政策对比浮条 -->
+  <div id="compareBar" class="compare-bar hidden">
+    <div class="cb-title">对比栏</div>
+    <div class="cb-items" id="compareList"></div>
+    <div class="cb-actions">
+      <button id="compareStart" class="btn primary" disabled>开始对比</button>
+      <button id="compareClear" class="btn ghost">清空</button>
+    </div>
+  </div>
+  <!-- 政策对比抽屉 -->
+  <div id="compareMask" class="mask hidden"></div>
+  <aside id="compareDrawer" class="compare-drawer hidden" role="dialog" aria-label="政策对比">
+    <button class="drawer-close" id="compareClose" aria-label="关闭">✕</button>
+    <div class="compare-head">
+      <h2>政策对比</h2>
+      <span class="compare-sub">并排查看核心要素 / 要点 / 风险 / 影响分级</span>
+    </div>
+    <div id="compareBody" class="compare-body"></div>
+  </aside>
+
+  <!-- 详情抽屉 -->
+  <div id="drawerMask" class="mask hidden"></div>
+  <aside id="drawer" class="drawer hidden"></aside>
+
+  <!-- 管理登录弹窗 -->
+  <div id="loginMask" class="mask hidden"></div>
+  <div id="loginModal" class="modal hidden" role="dialog" aria-label="管理登录">
+    <div class="modal-head"><h3>管理登录</h3><button class="modal-close" data-close="loginModal" aria-label="关闭">×</button></div>
+    <div class="modal-body">
+      <div class="auth-panel">
+        <div class="auth-icon">🔑</div>
+        <div class="auth-desc">本地后台操作（抓取 / 重解读 / 设置）需通过管理密码校验。默认密码 admin123，登录后建议在设置中修改。</div>
+        <div class="form-row"><label>管理密码</label><input id="loginPwd" type="password" autocomplete="current-password" /></div>
+        <div class="form-error" id="loginError" hidden></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-close="loginModal">取消</button>
+      <button id="btnLoginConfirm" class="btn primary">登录</button>
+    </div>
+  </div>
+
+  <!-- 后台设置弹窗 -->
+  <div id="settingsMask" class="mask hidden"></div>
+  <div id="settingsModal" class="modal wide hidden" role="dialog" aria-label="后台设置">
+    <div class="modal-head"><h3>后台设置</h3><button class="modal-close" data-close="settingsModal" aria-label="关闭">×</button></div>
+    <div class="modal-body">
+      <h3>抓取与展示</h3>
+      <div class="form-row"><label>服务机构</label><input id="setSiteOrg" type="text" /></div>
+      <div class="form-row"><label>新政策天数</label><input id="setNewDays" type="number" min="0" /></div>
+      <div class="form-row"><label>起始日期</label><input id="setMinDate" type="date" /></div>
+      <div class="form-row"><label>每源页数</label><input id="setListPages" type="number" min="1" /></div>
+      <h3>定时调度</h3>
+      <div class="form-row"><label>调度方式</label>
+        <select id="setSchedule">
+          <option value="manual">手动</option>
+          <option value="daily">每日</option>
+          <option value="weekly">每周</option>
+        </select>
+      </div>
+      <div class="form-row"><label>每日时点</label><input id="setDailyHour" type="number" min="0" max="23" /></div>
+      <div class="form-row"><label>每周几</label>
+        <select id="setWeekday">
+          <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
+          <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>
+        </select>
+      </div>
+      <div class="form-row"><label>每周时点</label><input id="setWeeklyHour" type="number" min="0" max="23" /></div>
+      <h3>大模型解读（可选）</h3>
+      <div class="form-row"><label>启用大模型</label>
+        <select id="setLlmEnabled"><option value="0">关闭（规则解读）</option><option value="1">启用</option></select>
+      </div>
+      <div class="form-row"><label>接口地址</label><input id="setLlmBase" type="text" /></div>
+      <div class="form-row"><label>模型名称</label><input id="setLlmModel" type="text" /></div>
+      <div class="form-row"><label>API Key</label><input id="setLlmKey" type="password" placeholder="留空则不修改原密钥" /></div>
+      <h3>修改管理密码</h3>
+      <div class="form-row"><label>原密码</label><input id="setOldPwd" type="password" /></div>
+      <div class="form-row"><label>新密码</label><input id="setNewPwd" type="password" /></div>
+      <div class="form-error" id="settingsError" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-close="settingsModal">取消</button>
+      <button id="btnSaveSettings" class="btn primary">保存设置</button>
+    </div>
+  </div>
+
+  <!-- 抓取日志弹窗 -->
+  <div id="logsMask" class="mask hidden"></div>
+  <div id="logsModal" class="modal wide hidden" role="dialog" aria-label="抓取日志">
+    <div class="modal-head"><h3>抓取日志</h3><button class="modal-close" data-close="logsModal" aria-label="关闭">×</button></div>
+    <div class="modal-body">
+      <div class="table-wrap">
+        <table class="log-table">
+          <thead><tr><th>时间</th><th>层级</th><th>来源</th><th>新增</th><th>找到</th><th>状态</th><th>耗时(ms)</th><th>说明</th></tr></thead>
+          <tbody id="logsBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" data-close="logsModal">关闭</button></div>
+  </div>
+
+  <!-- 命令面板 Ctrl / ⌘ + K -->
+  <div id="cmdPalette" class="cmd-palette hidden">
+    <div class="cmd-mask" data-close-cmd></div>
+    <div class="cmd-box">
+      <div class="cmd-input-row">
+        <span class="cmd-icon">⌕</span>
+        <input id="cmdInput" type="text" placeholder="搜索政策标题 / 标签 / 摘要，回车打开…" autocomplete="off" />
+        <kbd class="cmd-esc">ESC</kbd>
+      </div>
+      <div id="cmdResults" class="cmd-results"></div>
+      <div class="cmd-hint"><kbd>↑</kbd><kbd>↓</kbd> 选择 <kbd>Enter</kbd> 打开详情 <kbd>Esc</kbd> 关闭</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <span>数据来源均为官方政府站点，页面仅作内部政策跟踪与解读参考，具体执行以官方原文为准。</span>
+  </footer>
+
+  <button id="backTop" class="back-top hidden" aria-label="回到顶部">↑</button>
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js?v=69"></script>
+</body>
+</html>
