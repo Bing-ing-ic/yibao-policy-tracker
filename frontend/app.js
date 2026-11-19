@@ -24,7 +24,7 @@ document.body.dataset.theme = "aurora";
 function toggleFav(id) {
   id = +id;
   if (FAVS.has(id)) FAVS.delete(id); else FAVS.add(id);
-  saveIdList("yb_favs", [...FAVS]);
+  saveIdList("yb_favs", Array.from(FAVS));
   syncFavUI();
   return FAVS.has(id);
 }
@@ -51,20 +51,29 @@ const LOW_RELEVANCE = ["遴选公务员", "面试", "大赛", "获奖名单", "�
 /* ---------------- 静态数据缓存 ---------------- */
 const DB = { stats: null, facets: null, expStats: null, policies: [], exposures: [] };
 
-async function loadJSON(path) {
-  const r = await fetch(path);
-  if (!r.ok) throw new Error(path + " HTTP " + r.status);
-  return r.json();
+async function loadJSON(path, fallback) {
+  try {
+    let ctrl = null, timer = null;
+    if (typeof AbortController !== "undefined") {
+      ctrl = new AbortController();
+      timer = setTimeout(function () { ctrl.abort(); }, 15000);
+    }
+    const r = await fetch(path, ctrl ? { signal: ctrl.signal } : {});
+    if (timer) clearTimeout(timer);
+    if (!r.ok) throw new Error(path + " HTTP " + r.status);
+    return await r.json();
+  } catch (e) {
+    console.warn("静态数据加载失败：" + path, e);
+    return fallback;
+  }
 }
 
 async function initData() {
-  [DB.stats, DB.facets, DB.expStats, DB.policies, DB.exposures] = await Promise.all([
-    loadJSON("data/stats.json"),
-    loadJSON("data/facets.json"),
-    loadJSON("data/exposure_stats.json"),
-    loadJSON("data/policies.json"),
-    loadJSON("data/exposures.json"),
-  ]);
+  DB.stats = await loadJSON("data/stats.json", {});
+  DB.facets = await loadJSON("data/facets.json", { by_tag: [] });
+  DB.expStats = await loadJSON("data/exposure_stats.json", { org_type: {} });
+  DB.policies = await loadJSON("data/policies.json", []);
+  DB.exposures = await loadJSON("data/exposures.json", []);
 }
 
 function toast(msg) {
@@ -298,7 +307,7 @@ function refreshColumns() {
       if (map.has(c.name)) map.get(c.name).count += c.count;
       else map.set(c.name, { key: c.key, name: c.name, count: c.count });
     });
-    rows = [...map.values()];
+    rows = Array.from(map.values());
   }
   if (state.column && !rows.some((c) => c.key === state.column)) state.column = "";
   const wrap = $("#columnChips");
@@ -320,10 +329,8 @@ function refreshColumns() {
 function renderQuickTags() {
   const tags = ((window._facets && window._facets.by_tag) || []).filter((t) => t.count > 0);
   const fixed = QUICK_TAGS;
-  const ordered = [
-    ...fixed.map((t) => tags.find((x) => x.tag === t)).filter(Boolean),
-    ...tags.filter((x) => !fixed.includes(x.tag)).slice(0, 6),
-  ];
+  const ordered = fixed.map((t) => tags.find((x) => x.tag === t)).filter(Boolean)
+    .concat(tags.filter((x) => !fixed.includes(x.tag)).slice(0, 6));
   if (state.tag && !ordered.some((x) => x.tag === state.tag)) state.tag = "";
   const wrap = $("#quickTags");
   wrap.innerHTML = ordered.length
@@ -662,7 +669,7 @@ function loadList() {
   $("#policyList").innerHTML = items.map((p) => {
     const tags = (p.topic_tags || []).slice(0, 4)
       .map((t) => `<span class="badge tag-click${state.tag === t ? " badge-active" : ""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
-    const rel = p.relevance ?? 0;
+    const rel = p.relevance != null ? p.relevance : 0;
     const relCls = rel >= 60 ? "high" : "";
     const isNew = state.newIds.includes(p.id) || !!p.is_new;
     const aiBadge = `<span class="ai-type ${p.ai_type || "rule"}">${p.ai_type === "llm" ? "大模型解读" : "规则解读"}</span>`;
@@ -866,12 +873,12 @@ function closeDrawer() {
 
 /* ---------------- 工具 ---------------- */
 function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  return String(s != null ? s : "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 /* 仅放行 http/https 链接，避免抓取数据里的 javascript: 等协议注入到 href */
 function safeUrl(u) {
-  const s = String(u ?? "").trim();
+  const s = String(u != null ? u : "").trim();
   return /^https?:\/\//i.test(s) ? esc(s) : "";
 }
 
@@ -896,7 +903,7 @@ function effStatus(dateStr) {
 
 /* 关键词命中高亮：先按原文切片再逐段转义，避免拆散 &amp; 等 HTML 实体 */
 function hiKw(text, kw) {
-  const src = String(text ?? "");
+  const src = String(text != null ? text : "");
   kw = (kw || "").trim();
   if (!kw) return esc(src);
   let re;
@@ -999,7 +1006,7 @@ function renderChartTrend() {
   if (!el) return;
   const months = last12Months();
   if (!months.some((m) => m.count > 0)) { el.innerHTML = chartEmpty("近 12 月暂无发布数据"); return; }
-  const max = Math.max(1, ...months.map((m) => m.count));
+  const max = Math.max.apply(null, [1].concat(months.map((m) => m.count)));
   const W = 720, H = 210, L = 40, R = 16, T = 18, B = 30;
   const pw = W - L - R, ph = H - T - B;
   const x = (i) => L + (months.length <= 1 ? pw / 2 : i * pw / (months.length - 1));
@@ -1029,7 +1036,7 @@ function renderChartTopics() {
   if (!el) return;
   const tags = (((DB.facets || {}).by_tag) || []).slice().filter((t) => Number(t.count) > 0).sort((a, b) => Number(b.count) - Number(a.count)).slice(0, 10);
   if (!tags.length) { el.innerHTML = chartEmpty("暂无主题标签数据"); return; }
-  const max = Math.max(1, ...tags.map((t) => Number(t.count)));
+  const max = Math.max.apply(null, [1].concat(tags.map((t) => Number(t.count))));
   const W = 360, rowH = 22, L = 104, R = 34, T = 6, barW = W - L - R;
   const H = T + tags.length * rowH + 6;
   const rows = tags.map((t, i) => {
@@ -1070,7 +1077,7 @@ function renderChartExposure() {
   const entries = Object.entries(ot).filter((e) => Number(e[1]) > 0).sort((a, b) => Number(b[1]) - Number(a[1]));
   if (!entries.length) { el.innerHTML = chartEmpty("暂无曝光机构数据"); return; }
   const sum = entries.reduce((s, e) => s + Number(e[1]), 0);
-  const max = Math.max(1, ...entries.map((e) => Number(e[1])));
+  const max = Math.max.apply(null, [1].concat(entries.map((e) => Number(e[1]))));
   const W = 360, rowH = 34, L = 74, R = 48, T = 8, barW = W - L - R;
   const H = T + entries.length * rowH + 8;
   const rows = entries.map((e, i) => {
@@ -1090,7 +1097,7 @@ function renderChartRelevance() {
   const rows = Array.isArray(DB.policies) ? DB.policies : [];
   if (!rows.length) { el.innerHTML = chartEmpty("暂无相关度数据"); return; }
   const buckets = relevanceBuckets();
-  const max = Math.max(1, ...buckets.map((b) => b.n));
+  const max = Math.max.apply(null, [1].concat(buckets.map((b) => b.n)));
   const W = 300, H = 200, L = 30, R = 10, T = 20, B = 42;
   const pw = W - L - R, ph = H - T - B;
   const bw = Math.min(56, pw / buckets.length * 0.5);
@@ -1129,7 +1136,7 @@ function renderTagCloud() {
     .sort((a, b) => Number(b.count) - Number(a.count)).slice(0, 24);
   if (!tags.length) { el.innerHTML = chartEmpty("暂无主题标签数据"); return; }
   const counts = tags.map((t) => Number(t.count));
-  const max = Math.max(...counts), min = Math.min(...counts);
+  const max = Math.max.apply(null, counts), min = Math.min.apply(null, counts);
   el.innerHTML = tags.map((t) => {
     const c = Number(t.count);
     const f = max === min ? 0.5 : (c - min) / (max - min);
@@ -1164,7 +1171,7 @@ function renderSparks() {
     const key = el.dataset.spark || "spark";
     const arr = series[key] || [];
     if (!arr.length || arr.every((v) => !v)) { el.innerHTML = ""; return; }
-    const max = Math.max(...arr, 1), w = 120, h = 36, base = h - 1;
+    const max = Math.max.apply(null, arr.concat([1])), w = 120, h = 36, base = h - 1;
     const coords = arr.map((v, i) => [i * (w / Math.max(1, arr.length - 1)), h - 3 - (v / max) * (h - 6)]);
     const pts = coords.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
     const area = "M" + coords[0][0].toFixed(1) + " " + base
@@ -1393,11 +1400,18 @@ document.addEventListener("keydown", (e) => {
 (async function init() {
   renderAskQuick();
   renderAskEmpty();
+  if (typeof fetch === "undefined") {
+    toast("当前浏览器版本过低，无法加载数据，请升级后重试");
+    return;
+  }
   try {
     await initData();
   } catch (e) {
     toast("静态数据加载失败：" + (e.message || e));
     return;
+  }
+  if (!Array.isArray(DB.policies) || !DB.policies.length) {
+    toast("政策数据尚未就绪，请稍后刷新重试");
   }
   loadFacets();
   renderValidityChips();
@@ -1423,10 +1437,11 @@ const IS_LOCAL = ["127.0.0.1", "localhost", "[::1]", ""].includes(location.hostn
 const ADMIN = { token: localStorage.getItem("yb_admin_token") || "" };
 let _crawlTimer = null, _reanalyzeTimer = null;
 
-async function apiFetch(path, opts = {}) {
-  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+async function apiFetch(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
   if (ADMIN.token) headers["X-Admin-Token"] = ADMIN.token;
-  const r = await fetch(path, { ...opts, headers });
+  const r = await fetch(path, Object.assign({}, opts, { headers: headers }));
   if (r.status === 401) {
     ADMIN.token = ""; localStorage.removeItem("yb_admin_token"); refreshAdminUI();
     throw new Error("未授权，请先登录");
@@ -1557,10 +1572,10 @@ async function openLogs() {
         <td>${esc(r.run_at || "")}</td>
         <td>${esc(r.level || "")}</td>
         <td>${esc(r.source_name || "")}</td>
-        <td>${esc(r.added ?? 0)}</td>
-        <td>${esc(r.found ?? 0)}</td>
+        <td>${esc(r.added != null ? r.added : 0)}</td>
+        <td>${esc(r.found != null ? r.found : 0)}</td>
         <td>${esc(r.status || "")}</td>
-        <td>${esc(r.duration_ms ?? "")}</td>
+        <td>${esc(r.duration_ms != null ? r.duration_ms : "")}</td>
         <td>${esc(r.message || "")}</td>
       </tr>`).join("")
       : `<tr><td class="empty" colspan="8">暂无抓取日志</td></tr>`;
@@ -1575,13 +1590,13 @@ async function openSettings() {
   try {
     const s = await apiFetch("/api/settings");
     $("#setSiteOrg").value = s.site_org || "";
-    $("#setNewDays").value = s.new_days ?? "3";
+    $("#setNewDays").value = s.new_days != null ? s.new_days : "3";
     $("#setMinDate").value = s.min_policy_date || "";
-    $("#setListPages").value = s.list_pages ?? "4";
+    $("#setListPages").value = s.list_pages != null ? s.list_pages : "4";
     $("#setSchedule").value = s.schedule || "manual";
-    $("#setDailyHour").value = s.daily_hour ?? "8";
+    $("#setDailyHour").value = s.daily_hour != null ? s.daily_hour : "8";
     $("#setWeekday").value = s.weekly_weekday || "1";
-    $("#setWeeklyHour").value = s.weekly_hour ?? "8";
+    $("#setWeeklyHour").value = s.weekly_hour != null ? s.weekly_hour : "8";
     $("#setLlmEnabled").value = s.llm_enabled || "0";
     $("#setLlmBase").value = s.llm_base_url || "";
     $("#setLlmModel").value = s.llm_model || "";
