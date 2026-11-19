@@ -242,7 +242,7 @@ LLM_ENABLED = os.environ.get("LLM_ENABLED", "0") == "1"
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "glm-4-flash")
-LLM_TIMEOUT = 40
+LLM_TIMEOUT = 15
 
 # 站点身份（用于解读时标注适用语境）
 SITE_CONTEXT = {

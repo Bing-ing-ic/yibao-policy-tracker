@@ -36,6 +36,40 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt
 
+      - name: 探测大模型连通性（不阻断流程）
+        working-directory: backend
+        env:
+          LLM_ENABLED: ${{ secrets.LLM_ENABLED || '0' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY || '' }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || '' }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL || '' }}
+        run: |
+          python - <<'PY'
+          import os, time, json, urllib.request, urllib.error
+          base = os.environ.get("LLM_BASE_URL") or "https://open.bigmodel.cn/api/paas/v4"
+          key = os.environ.get("LLM_API_KEY", "")
+          model = os.environ.get("LLM_MODEL") or "glm-4-flash"
+          if not key:
+              print("[LLM-PROBE] 未配置 LLM_API_KEY，跳过探测")
+              raise SystemExit(0)
+          body = {"model": model, "messages": [{"role": "user", "content": "回复ok"}], "temperature": 0}
+          req = urllib.request.Request(
+              base.rstrip("/") + "/chat/completions",
+              data=json.dumps(body).encode("utf-8"),
+              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+              method="POST",
+          )
+          t = time.time()
+          try:
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  d = json.load(r)
+              print(f"[LLM-PROBE] 成功 HTTP {r.status} 耗时 {time.time()-t:.1f}s 回复={d['choices'][0]['message']['content'][:40]}")
+          except urllib.error.HTTPError as e:
+              print(f"[LLM-PROBE] HTTP {e.code} {e.read().decode('utf-8')[:200]}")
+          except Exception as e:
+              print(f"[LLM-PROBE] 网络/超时失败：{type(e).__name__} {e}")
+          PY
+
       - name: 抓取政策与曝光并导出静态数据
         working-directory: backend
         env:

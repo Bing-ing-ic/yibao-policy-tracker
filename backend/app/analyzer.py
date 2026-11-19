@@ -439,7 +439,7 @@ def _llm_creds():
     )
 
 
-def _post_chat(url, headers, payload, retries=2):
+def _post_chat(url, headers, payload, retries=1):
     """聊天接口请求：超时/网络/5xx 退避重试一次，降低免费接口波动导致的回退率。"""
     last = None
     for attempt in range(retries):
