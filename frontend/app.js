@@ -131,6 +131,17 @@ function switchView(view) {
   });
 }
 
+/* KPI 卡片点击：跳转到关联模块（政策列表 / 曝光台 / 按相关度排序） */
+function gotoKpi(target) {
+  if (target === "exposure") { switchView("exposure"); return; }
+  switchView("policy");
+  state.page = 1;
+  state.sort = target === "policy-relevance" ? "relevance" : "date";
+  syncSortChips();
+  loadList();
+  focusPolicyList();
+}
+
 /* ---------------- 政策问答（本地规则检索，复刻后端回退口径） ---------------- */
 const ASK_QUICK = ["参保缴费怎么缴", "异地就医怎么备案", "集采药品如何执行", "门诊统筹政策", "定点机构管理要求", "基金监管重点", "生育保险待遇", "个人账户家庭共济"];
 
@@ -1349,6 +1360,14 @@ function cmdOpenSelected() {
 $$("#moduleTabs .mtab").forEach((t) =>
   t.addEventListener("click", () => switchView(t.dataset.view))
 );
+
+$$("#dashboardView .kpi-card[data-goto]").forEach((card) => {
+  const go = () => gotoKpi(card.dataset.goto);
+  card.addEventListener("click", go);
+  card.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+  });
+});
 
 $$("#levelChips .chip").forEach((c) =>
   c.addEventListener("click", () => setLevel(c.dataset.level))
