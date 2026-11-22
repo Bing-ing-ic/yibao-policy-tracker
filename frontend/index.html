@@ -10,7 +10,7 @@
     /* 前台展示关闭闸门（仅隐藏对外页面；后台抓取 / 解读 / 快照由 Actions 定时任务继续运行）。
        重新开放：把 FORCE_CLOSED 改为 false，或将 CLOSE_AT 调到未来时间，重新部署即可。 */
     (function () {
-      var CLOSE_AT = Date.UTC(2026, 10, 27, 10, 30, 0); // 北京时间 2026-11-27 18:30:00（UTC+8）
+      var CLOSE_AT = Date.UTC(2026, 10, 23, 0, 30, 0); // 北京时间 2026-11-23 08:30:00（UTC+8）
       var FORCE_CLOSED = false;
       var closed = FORCE_CLOSED || Date.now() >= CLOSE_AT;
       window.__SITE_CLOSED__ = closed;
