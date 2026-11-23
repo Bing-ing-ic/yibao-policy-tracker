@@ -143,9 +143,14 @@ def _fill_detail(conn, fetcher, level, home, policy_id, item):
     summary = content[:160]
     chash = _hash(content)
 
-    # 同稿二次去重：正文非空时，若库内已存在相同正文（转载 / 同一篇在不同栏目挂稿，URL 不同），
-    # 视为同一篇，丢弃当前新条目，避免同稿多条抬高计数；空正文不参与，避免图解/流程页互相误删。
-    if content.strip():
+    # 同稿二次去重：正文有实质内容时，若库内已存在相同正文（转载 / 同一篇在不同栏目挂稿，URL 不同），
+    # 视为同一篇，丢弃当前新条目，避免同稿多条抬高计数。
+    # 豁免退化正文：图解/表格/标题回填导致正文退化成标题、或实质内容过少（去标题后不足 30 字），
+    # 这类条目往往只是标题相同、不同期次名单/正文不同，并非同稿，不参与哈希比对，避免误删。
+    body = content.strip()
+    rest = body.replace(title or "", "")
+    real_len = len(rest.replace("\n", "").replace("\r", "").replace(" ", "").replace("\t", ""))
+    if body and real_len >= 30:
         dup = conn.execute(
             "SELECT id FROM policies WHERE content_hash=? AND id<>?", (chash, policy_id)
         ).fetchone()
