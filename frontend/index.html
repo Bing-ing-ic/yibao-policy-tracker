@@ -12,7 +12,10 @@
     (function () {
       var CLOSE_AT = Date.UTC(2026, 10, 23, 0, 30, 0); // 北京时间 2026-11-23 08:30:00（UTC+8）
       var FORCE_CLOSED = false;
-      var closed = FORCE_CLOSED || Date.now() >= CLOSE_AT;
+      // 本地调试环境（localhost / 127.0.0.1 / file:// 直开）始终豁免关闭闸门；仅线上公网域名按时间关闭。
+      var host = location.hostname || "";
+      var IS_LOCAL = host === "" || host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+      var closed = !IS_LOCAL && (FORCE_CLOSED || Date.now() >= CLOSE_AT);
       window.__SITE_CLOSED__ = closed;
       if (closed) document.documentElement.setAttribute("data-site-closed", "1");
     })();
