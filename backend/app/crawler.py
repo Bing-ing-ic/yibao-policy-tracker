@@ -141,11 +141,23 @@ def _fill_detail(conn, fetcher, level, home, policy_id, item):
         return False
     content = content or ""
     summary = content[:160]
+    chash = _hash(content)
+
+    # 同稿二次去重：正文非空时，若库内已存在相同正文（转载 / 同一篇在不同栏目挂稿，URL 不同），
+    # 视为同一篇，丢弃当前新条目，避免同稿多条抬高计数；空正文不参与，避免图解/流程页互相误删。
+    if content.strip():
+        dup = conn.execute(
+            "SELECT id FROM policies WHERE content_hash=? AND id<>?", (chash, policy_id)
+        ).fetchone()
+        if dup:
+            conn.execute("DELETE FROM analysis WHERE policy_id=?", (policy_id,))
+            conn.execute("DELETE FROM policies WHERE id=?", (policy_id,))
+            return False
 
     conn.execute(
         """UPDATE policies SET title=?, doc_no=?, publish_date=?, summary=?, content=?, content_hash=?,
                updated_at=datetime('now','localtime') WHERE id=?""",
-        (title, doc_no, pub_date, summary, content, _hash(content), policy_id),
+        (title, doc_no, pub_date, summary, content, chash, policy_id),
     )
 
     analysis = analyzer.analyze(title, doc_no, pub_date, content, level)
