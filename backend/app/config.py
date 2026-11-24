@@ -36,6 +36,7 @@ SOURCES = [
             {"key": "policy_doc", "name": "政策文件", "url": "https://ylbz.yn.gov.cn/zfxxgk/zcwj/qtwj/"},
             {"key": "policy_read", "name": "政策解读", "url": "https://ylbz.yn.gov.cn/zfxxgk/fdzdgknr/zcjd/"},
             {"key": "notice", "name": "通知公告", "url": "https://ylbz.yn.gov.cn/zfxxgk/fdzdgknr/tzgg/"},
+            {"key": "consult", "name": "意见征集", "url": "https://ylbz.yn.gov.cn/zfxxgk/fdzdgknr/yjzj/"},
         ],
     },
     {
