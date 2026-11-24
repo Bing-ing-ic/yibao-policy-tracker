@@ -96,10 +96,10 @@ jobs:
           enablement: enable
 
       - name: 上传站点产物（frontend）
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: frontend
 
       - name: 部署到 GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
