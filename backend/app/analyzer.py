@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """政策解读：本地规则抽取为主，配置大模型后自动补充 / 升级为 LLM 解读。"""
 import json
+import os
 import re
 import time
 import requests
@@ -569,7 +570,12 @@ def _llm_analyze(title, doc_no, publish_date, content):
 
 def analyze(title, doc_no, publish_date, content, level=None):
     global _llm_called
-    use_llm = database.get_setting("llm_enabled", "0") == "1"
+    # 环境显式关闭时不读库内旧开关；环境未设置时再回退数据库设置，兼容本地后台配置。
+    env_enabled = os.environ.get("LLM_ENABLED")
+    if env_enabled is not None:
+        use_llm = env_enabled == "1"
+    else:
+        use_llm = database.get_setting("llm_enabled", "0") == "1"
     result = None
     allow_llm = use_llm and (config.LLM_MAX_PER_RUN <= 0 or _llm_called < config.LLM_MAX_PER_RUN)
     if allow_llm:

@@ -127,7 +127,7 @@ def init_db():
     ):
         if col not in existing:
             cur.execute(f"ALTER TABLE analysis ADD COLUMN {col} {ddl}")
-    # 默认设置
+    # 默认设置：LLM 开关以进程环境/显式配置为准；仓库干净库默认规则解读，避免云端 runner 误读本地旧设置。
     defaults = {
         "schedule": config.DEFAULT_SCHEDULE,
         "daily_hour": str(config.DAILY_HOUR),

@@ -123,13 +123,13 @@ MIN_POLICY_DATE = os.environ.get("MIN_POLICY_DATE", "2024-01-01")
 # 列表抓取页数（1 = 仅首页）；覆盖 2024 年至今所需分页
 LIST_PAGES = int(os.environ.get("LIST_PAGES", "4"))
 # 详情页超时（连接 / 读取分离）、并发礼貌间隔
-REQUEST_TIMEOUT_CONNECT = 10
-REQUEST_TIMEOUT_READ = 25
-REQUEST_DELAY = 0.6
+REQUEST_TIMEOUT_CONNECT = int(os.environ.get("REQUEST_TIMEOUT_CONNECT", "8"))
+REQUEST_TIMEOUT_READ = int(os.environ.get("REQUEST_TIMEOUT_READ", "18"))
+REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "0.4"))
 MAX_DETAIL_CHARS = 20000
 # 抓取重试：可重试状态码 + 网络/超时错误；指数退避 base * 2**(n-1)
-REQUEST_RETRIES = int(os.environ.get("REQUEST_RETRIES", "3"))
-RETRY_BACKOFF = 1.2
+REQUEST_RETRIES = int(os.environ.get("REQUEST_RETRIES", "2"))
+RETRY_BACKOFF = 1.0
 RETRY_STATUS = {429, 500, 502, 503, 504}
 
 HEADERS = {
@@ -243,7 +243,7 @@ LLM_ENABLED = os.environ.get("LLM_ENABLED", "0") == "1"
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "glm-4-flash")
-LLM_TIMEOUT = 30
+LLM_TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "20"))
 # 每轮抓取路径最多调用大模型解读的条数（0=不限）；超出后本轮其余条目走规则解读，控制 runner 总时长与额度
 LLM_MAX_PER_RUN = int(os.environ.get("LLM_MAX_PER_RUN", "0"))
 

@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.deps-installed
 
 # ---- 本地数据库与运行日志（含口令哈希、业务数据，禁止入库） ----
 backend/data/*.db

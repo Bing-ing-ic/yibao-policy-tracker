@@ -21,6 +21,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 实测一轮政策+曝光抓取约 56 分钟（652 条详情逐条请求政务站），闸门需覆盖抓取+导出+回提交+上传，留足余量；
+    # 不可压到 45 分钟以内，否则抓取未完成即被 runner 强制终止。
+    timeout-minutes: 70
     steps:
       - name: 检出代码
         uses: actions/checkout@v7
@@ -77,9 +80,25 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY || '' }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || '' }}
           LLM_MODEL: ${{ secrets.LLM_MODEL || '' }}
-          # 每轮 runner 最多发起 120 条大模型解读，其余走规则解读，控制总时长与免费额度
-          LLM_MAX_PER_RUN: "120"
+          # 每轮 runner 最多发起 40 条大模型解读，其余走规则解读，控制 runner 总时长与免费额度
+          LLM_MAX_PER_RUN: "40"
+          REQUEST_TIMEOUT_CONNECT: "8"
+          REQUEST_TIMEOUT_READ: "18"
+          REQUEST_RETRIES: "2"
+          REQUEST_DELAY: "0.4"
+          LLM_TIMEOUT: "20"
         run: python run_pipeline.py
+
+      - name: 校验静态产物完整
+        run: |
+          test -f frontend/index.html
+          test -f frontend/app.js
+          test -f frontend/style.css
+          for f in policies.json policy_details.json exposures.json stats.json facets.json exposure_stats.json; do
+            test -f "frontend/data/$f"
+            python -c "import json,sys; json.load(open('frontend/data/$f', encoding='utf-8'))"
+          done
+          echo "[artifact] frontend 静态产物与 JSON 校验通过"
 
       - name: 回提交更新后的静态数据快照
         run: |
@@ -97,6 +116,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
