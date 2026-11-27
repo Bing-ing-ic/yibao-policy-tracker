@@ -83,13 +83,15 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY || '' }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || '' }}
           LLM_MODEL: ${{ secrets.LLM_MODEL || '' }}
-          # 每轮 runner 最多发起 40 条大模型解读，其余走规则解读，控制 runner 总时长与免费额度
-          LLM_MAX_PER_RUN: "40"
+          # 每轮最多成功解读为大模型结论的条数；失败回退规则、不占成功名额。
+          LLM_MAX_PER_RUN: "80"
+          # 每轮最多发起的大模型尝试次数（含失败），兜底 runner 总时长与免费额度。
+          LLM_MAX_ATTEMPTS: "120"
           REQUEST_TIMEOUT_CONNECT: "8"
           REQUEST_TIMEOUT_READ: "18"
           REQUEST_RETRIES: "2"
           REQUEST_DELAY: "0.4"
-          LLM_TIMEOUT: "20"
+          LLM_TIMEOUT: "30"
         run: python run_pipeline.py
 
       - name: 校验静态产物完整

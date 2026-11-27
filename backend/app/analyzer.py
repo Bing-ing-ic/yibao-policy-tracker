@@ -8,8 +8,10 @@ import requests
 
 from . import config, database
 
-# 本轮进程内已发起的 LLM 解读计数（配合 LLM_MAX_PER_RUN 闸门，控制 runner 总时长与额度）
+# 本轮进程内 LLM 计数：_llm_called 为成功解读条数，_llm_attempted 为已发起尝试条数（含失败）。
+# 成功名额配合 LLM_MAX_PER_RUN，尝试总数配合 LLM_MAX_ATTEMPTS 兜底 runner 总时长与额度。
 _llm_called = 0
+_llm_attempted = 0
 
 # ------------------------------------------------------------ 主题词典
 TOPIC_DICT = [
@@ -438,13 +440,13 @@ def _sanitize_llm(parsed, content):
 def _llm_creds():
     return (
         database.get_setting("llm_base_url", "") or config.LLM_BASE_URL,
-        database.get_setting("llm_api_key", ""),
+        database.get_setting("llm_api_key", "") or config.LLM_API_KEY,
         database.get_setting("llm_model", "") or config.LLM_MODEL,
     )
 
 
-def _post_chat(url, headers, payload, retries=1):
-    """聊天接口请求：超时/网络/5xx 退避重试一次，降低免费接口波动导致的回退率。"""
+def _post_chat(url, headers, payload, retries=2):
+    """聊天接口请求：超时/网络/5xx 退避重试，降低免费接口波动导致的回退率。"""
     last = None
     for attempt in range(retries):
         try:
@@ -454,7 +456,7 @@ def _post_chat(url, headers, payload, retries=1):
         except Exception as e:
             last = e
             if attempt < retries - 1:
-                time.sleep(1.2)
+                time.sleep(1.5)
     raise last
 
 
@@ -487,7 +489,7 @@ def llm_chat_json(system, user, temperature=0.2):
 
 def _llm_analyze(title, doc_no, publish_date, content):
     base = database.get_setting("llm_base_url", "") or config.LLM_BASE_URL
-    key = database.get_setting("llm_api_key", "")
+    key = database.get_setting("llm_api_key", "") or config.LLM_API_KEY
     model = database.get_setting("llm_model", "") or config.LLM_MODEL
     if not base or not key:
         return None
@@ -569,7 +571,7 @@ def _llm_analyze(title, doc_no, publish_date, content):
 
 
 def analyze(title, doc_no, publish_date, content, level=None):
-    global _llm_called
+    global _llm_called, _llm_attempted
     # 环境显式关闭时不读库内旧开关；环境未设置时再回退数据库设置，兼容本地后台配置。
     env_enabled = os.environ.get("LLM_ENABLED")
     if env_enabled is not None:
@@ -577,10 +579,14 @@ def analyze(title, doc_no, publish_date, content, level=None):
     else:
         use_llm = database.get_setting("llm_enabled", "0") == "1"
     result = None
-    allow_llm = use_llm and (config.LLM_MAX_PER_RUN <= 0 or _llm_called < config.LLM_MAX_PER_RUN)
+    success_cap = config.LLM_MAX_PER_RUN <= 0 or _llm_called < config.LLM_MAX_PER_RUN
+    attempt_cap = config.LLM_MAX_ATTEMPTS <= 0 or _llm_attempted < config.LLM_MAX_ATTEMPTS
+    allow_llm = use_llm and success_cap and attempt_cap
     if allow_llm:
-        _llm_called += 1
+        _llm_attempted += 1
         result = _llm_analyze(title, doc_no, publish_date, content)
+        if result is not None:
+            _llm_called += 1
     if result is None:
         result = _rule_analyze(title, doc_no, publish_date, content, level)
 
