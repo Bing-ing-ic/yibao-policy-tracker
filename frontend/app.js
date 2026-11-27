@@ -159,7 +159,7 @@ function renderAskEmpty() {
   $("#askResult").innerHTML = `<div class="ask-empty">输入问题或点击上方常见问题，将基于已抓取的官方政策检索相关条目，并列出可溯源的政策依据。</div>`;
 }
 
-function askQuestion() {
+async function askQuestion() {
   const q = $("#askInput").value.trim();
   if (!q) { toast("请先输入要咨询的问题"); return; }
   const box = $("#askResult");
@@ -205,6 +205,8 @@ function askQuestion() {
     result = { question: q, answer: "未检索到与该问题直接相关的医保政策，可换用医保关键词（如：参保缴费、异地就医、集采药品、门诊统筹、定点管理、基金监管、生育保险、个人账户）再试。", points: [], note: "当前无强相关政策。", llm: false, sources: [] };
   } else {
     const topRows = scored.slice(0, 6).map((x) => x.r);
+    // 要点提炼存于详情包，按需加载后补齐问答要点
+    await loadDetails();
     const sources = topRows.map((r) => ({
       id: r.id, level: r.level, title: r.title, source_name: r.source_name,
       column_name: r.column_name, publish_date: r.publish_date, relevance: r.relevance, url: r.url,
@@ -212,7 +214,9 @@ function askQuestion() {
     const answer = topRows.slice(0, 3).map((r) => r.ai_summary || "").filter(Boolean).join("；").slice(0, 300);
     const points = [];
     for (const r of topRows) {
-      for (const k of (r.key_points || []).slice(0, 2)) {
+      // 兼容新旧快照：要点优先取详情包，回退列表包（旧快照字段仍在列表包）
+      const kp = (getDetail(r.id).key_points || r.key_points || []);
+      for (const k of kp.slice(0, 2)) {
         if (!points.includes(k)) points.push(k);
       }
     }
@@ -1278,9 +1282,14 @@ function renderCompareBar() {
   const start = $("#compareStart");
   if (start) start.disabled = COMPARE.length < 2;
 }
-function openCompare() {
+async function openCompare() {
   if (COMPARE.length < 2) { toast("请至少选择 2 条政策进行对比"); return; }
-  const rows = COMPARE.map((id) => DB.policies.find((x) => x.id === id)).filter(Boolean);
+  // 对比所需的核心要素 / 要点 / 风险 / 影响分级等字段在详情包中，按需加载后合并
+  await loadDetails();
+  const rows = COMPARE.map((id) => {
+    const raw = DB.policies.find((x) => x.id === id);
+    return raw ? Object.assign({}, raw, getDetail(id)) : null;
+  }).filter(Boolean);
   if (rows.length < 2) { toast("对比数据不完整"); return; }
   const body = $("#compareBody");
   if (!body) return;

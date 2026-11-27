@@ -28,6 +28,12 @@ def _j(v):
 # 详情包字段：仅在打开政策抽屉（原文 / 落地动作 / 待遇标准 / 关键数据）时按需加载，
 # 不进入首屏列表包，以减小首屏下载体积。
 _DETAIL_FIELDS = ("content", "actions", "standards", "key_data")
+# 详情/对比/问答专用字段：首屏卡片、筛选、排序、KPI 与图表均不读取，
+# 随详情包按 id 索引、按需懒加载，避免混入首屏列表包造成不必要的下载与解析。
+_DETAIL_ONLY_FIELDS = (
+    "impact_matrix", "key_points", "risks", "relevance_note", "parent_basis",
+    "applicable_to", "policy_type", "core_elements", "city_impact", "impact_level",
+)
 # 前端未使用的冗余字段，导出时直接剔除，避免随包下发。
 _DROP_FIELDS = ("content_hash", "status", "updated_at", "keywords")
 # 需 JSON 解析的数组字段
@@ -55,9 +61,9 @@ def _export_policies(conn):
         for f in _ARRAY_FIELDS:
             d[f] = _j(d.get(f))
         # 抽出详情字段（数组已解析），单独入详情包
-        detail = {f: d.get(f) for f in _DETAIL_FIELDS}
+        detail = {f: d.get(f) for f in _DETAIL_FIELDS + _DETAIL_ONLY_FIELDS}
         details[str(d["id"])] = detail
-        for f in _DETAIL_FIELDS:
+        for f in _DETAIL_FIELDS + _DETAIL_ONLY_FIELDS:
             d.pop(f, None)
         for f in _DROP_FIELDS:
             d.pop(f, None)
