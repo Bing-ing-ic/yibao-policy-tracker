@@ -249,6 +249,25 @@ LLM_MAX_PER_RUN = int(os.environ.get("LLM_MAX_PER_RUN", "0"))
 # 每轮最多发起的大模型尝试次数（含失败，0=不限）；作为总时长兜底，避免大量超时拖垮 runner。
 LLM_MAX_ATTEMPTS = int(os.environ.get("LLM_MAX_ATTEMPTS", "120"))
 
+# 分层成功解读配额：本站面向玉溪澄江基层执行，市级（玉溪本级+区县）政策为主，
+# 省级次之，国家政策作为上位指导少量解读。各层独立占用名额，互不挤占。
+# 环境变量格式：municipal:60,provincial:10,national:10（0=该层不限）。
+def _parse_quota(raw):
+    default = {"municipal": 60, "provincial": 10, "national": 10}
+    if not raw:
+        return default
+    out = {}
+    for part in raw.split(","):
+        if ":" in part:
+            k, v = part.split(":", 1)
+            try:
+                out[k.strip()] = int(v.strip())
+            except ValueError:
+                pass
+    return {**default, **out}
+
+LLM_QUOTA_BY_LEVEL = _parse_quota(os.environ.get("LLM_QUOTA_BY_LEVEL", ""))
+
 # 站点身份（用于解读时标注适用语境）
 SITE_CONTEXT = {
     "org": "玉溪澄江市乡镇卫生院",

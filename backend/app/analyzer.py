@@ -8,10 +8,11 @@ import requests
 
 from . import config, database
 
-# 本轮进程内 LLM 计数：_llm_called 为成功解读条数，_llm_attempted 为已发起尝试条数（含失败）。
-# 成功名额配合 LLM_MAX_PER_RUN，尝试总数配合 LLM_MAX_ATTEMPTS 兜底 runner 总时长与额度。
+# 本轮进程内 LLM 计数：_llm_called 为成功解读条数，_llm_attempted 为已发起尝试条数（含失败），
+# _llm_called_by_level 按政策层级统计成功条数，配合分层配额（市级优先）。
 _llm_called = 0
 _llm_attempted = 0
+_llm_called_by_level = {}
 
 # ------------------------------------------------------------ 主题词典
 TOPIC_DICT = [
@@ -579,14 +580,18 @@ def analyze(title, doc_no, publish_date, content, level=None):
     else:
         use_llm = database.get_setting("llm_enabled", "0") == "1"
     result = None
+    lv = level or "national"
+    quota = config.LLM_QUOTA_BY_LEVEL.get(lv, config.LLM_QUOTA_BY_LEVEL.get("national", 0))
+    level_cap = quota <= 0 or _llm_called_by_level.get(lv, 0) < quota
     success_cap = config.LLM_MAX_PER_RUN <= 0 or _llm_called < config.LLM_MAX_PER_RUN
     attempt_cap = config.LLM_MAX_ATTEMPTS <= 0 or _llm_attempted < config.LLM_MAX_ATTEMPTS
-    allow_llm = use_llm and success_cap and attempt_cap
+    allow_llm = use_llm and level_cap and success_cap and attempt_cap
     if allow_llm:
         _llm_attempted += 1
         result = _llm_analyze(title, doc_no, publish_date, content)
         if result is not None:
             _llm_called += 1
+            _llm_called_by_level[lv] = _llm_called_by_level.get(lv, 0) + 1
     if result is None:
         result = _rule_analyze(title, doc_no, publish_date, content, level)
 

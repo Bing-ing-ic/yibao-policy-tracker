@@ -83,7 +83,9 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY || '' }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || '' }}
           LLM_MODEL: ${{ secrets.LLM_MODEL || '' }}
-          # 每轮最多成功解读为大模型结论的条数；失败回退规则、不占成功名额。
+          # 分层成功解读配额：市级（玉溪本级+区县）为主，省级次之，国家少量；各层独立名额互不挤占。
+          LLM_QUOTA_BY_LEVEL: "municipal:60,provincial:10,national:10"
+          # 每轮全局成功解读上限兜底；失败回退规则、不占成功名额。
           LLM_MAX_PER_RUN: "80"
           # 每轮最多发起的大模型尝试次数（含失败），兜底 runner 总时长与免费额度。
           LLM_MAX_ATTEMPTS: "120"
