@@ -5,6 +5,9 @@ name: 定时抓取并更新静态站点
 # 结构拆为 build / deploy 两个 job：build 负责抓取、导出、回提交并上传站点产物；
 # deploy 待 build 结束、产物元数据完全落定后再消费发布，避免同一 job 内“上传→部署”紧接执行的产物元数据竞态。
 on:
+  # 推送 main 时重新构建并发布（便于代码/数据快照改动即时上线）
+  push:
+    branches: [main]
   schedule:
     - cron: "15 0 * * *"
   workflow_dispatch:
